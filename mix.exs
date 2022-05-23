@@ -14,7 +14,7 @@ defmodule MyBenshee.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      applications: [:httpoison, :benchee, :timex],
+      applications: [:httpoison, :benchee, :timex, :jason],
       extra_applications: [:logger]
     ]
   end
@@ -23,6 +23,7 @@ defmodule MyBenshee.MixProject do
   defp deps do
     [
       {:benchee, "~> 1.0", only: :dev},
+      {:jason, "~> 1.3"},
       {:httpoison, "~> 1.8"},
       {:timex, "~> 3.7.6"},
       {:floki, "~> 0.31.0"}

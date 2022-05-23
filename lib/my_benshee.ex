@@ -23,16 +23,14 @@ defmodule MyBenchee do
     medium = for _ <- 1..100, into: "", do: "a"
     long = for _ <- 1..10_00, into: "", do: "a"
 
-    Benchee.run(
-      %{
-        "interpolation short" => fn -> short <> short end,
-        "concatenation short" => fn -> "#{short}#{short}" end,
-        "interpolation medium" => fn -> medium <> medium end,
-        "concatenation medium" => fn -> "#{medium}#{medium}" end,
-        "interpolation long" => fn -> long <> long end,
-        "concatenation long" => fn -> "#{long}#{long}" end
-      }
-    )
+    Benchee.run(%{
+      "interpolation short" => fn -> short <> short end,
+      "concatenation short" => fn -> "#{short}#{short}" end,
+      "interpolation medium" => fn -> medium <> medium end,
+      "concatenation medium" => fn -> "#{medium}#{medium}" end,
+      "interpolation long" => fn -> long <> long end,
+      "concatenation long" => fn -> "#{long}#{long}" end
+    })
   end
 
   @doc """
@@ -55,25 +53,27 @@ defmodule MyBenchee do
   def map_merging_vs_map_put() do
     map = %{a: :a}
     map_put = fn -> map |> Map.put(:a, :a) end
-    map_merge = fn -> %{map | a: :a}  end
-    map_update = fn -> Map.update!(map, :a, fn _ -> :a end)  end
+    map_merge = fn -> %{map | a: :a} end
+    map_update = fn -> Map.update!(map, :a, fn _ -> :a end) end
 
     map_3_elem = %{a: :a, b: :b, c: :c}
     map_3_elem_put = fn -> map_3_elem |> Map.put(:a, :a) |> Map.put(:c, :c) |> Map.put(:b, :b) end
-    map_3_elem_merge = fn -> %{map_3_elem | a: :a, c: :c, b: :b}  end
-    map_3_elem_update = fn -> Map.update!(map_3_elem, :a, fn _ -> :a end) |> Map.update!(:b, fn _ -> :b end) |> Map.update!(:c, fn _ -> :c end)  end
+    map_3_elem_merge = fn -> %{map_3_elem | a: :a, c: :c, b: :b} end
 
+    map_3_elem_update = fn ->
+      Map.update!(map_3_elem, :a, fn _ -> :a end)
+      |> Map.update!(:b, fn _ -> :b end)
+      |> Map.update!(:c, fn _ -> :c end)
+    end
 
-    Benchee.run(
-      %{
-        "map_put" => map_put,
-        "map_merge" => map_merge,
-        "map_update" => map_update,
-        "map_3_elem_put" => map_3_elem_put,
-        "map_3_elem_merge" => map_3_elem_merge,
-        "map_3_elem_update" => map_3_elem_update,
-      }
-    )
+    Benchee.run(%{
+      "map_put" => map_put,
+      "map_merge" => map_merge,
+      "map_update" => map_update,
+      "map_3_elem_put" => map_3_elem_put,
+      "map_3_elem_merge" => map_3_elem_merge,
+      "map_3_elem_update" => map_3_elem_update
+    })
   end
 
   @doc """
@@ -136,8 +136,12 @@ defmodule MyBenchee do
 
     Benchee.run(
       %{
-        "date_add" => fn {inputs, days_to_shift} -> Enum.map(inputs, fn input -> DateTime.add(input, (days_to_shift * one_day)) end) end,
-        "timex_add" => fn {inputs, days_to_shift} -> Enum.map(inputs, fn input -> Timex.shift(input, days: days_to_shift) end) end
+        "date_add" => fn {inputs, days_to_shift} ->
+          Enum.map(inputs, fn input -> DateTime.add(input, days_to_shift * one_day) end)
+        end,
+        "timex_add" => fn {inputs, days_to_shift} ->
+          Enum.map(inputs, fn input -> Timex.shift(input, days: days_to_shift) end)
+        end
       },
       inputs: %{
         "one date shift one day" => {[Timex.now()], 1},
@@ -145,8 +149,51 @@ defmodule MyBenchee do
         "20 dates shift one day" => {1..20 |> Enum.map(fn _ -> Timex.now() end), 1},
         "20 dates shift 500 days" => {1..20 |> Enum.map(fn _ -> Timex.now() end), 500},
         "400 dates shift one day" => {1..400 |> Enum.map(fn _ -> Timex.now() end), 1},
-        "400 dates shift 500 days" => {1..400 |> Enum.map(fn _ -> Timex.now() end), 500},
+        "400 dates shift 500 days" => {1..400 |> Enum.map(fn _ -> Timex.now() end), 500}
       }
     )
+  end
+
+  @doc """
+  Name             ips        average  deviation         median         99th %
+  SHA256      299.47 K        3.34 μs   ±708.74%           3 μs           7 μs
+  SHA224      297.41 K        3.36 μs   ±795.19%           3 μs           7 μs
+  MD5         269.11 K        3.72 μs   ±789.67%           3 μs           7 μs
+
+  Comparison:
+  SHA256      299.47 K
+  SHA224      297.41 K - 1.01x slower +0.0231 μs
+  MD5         269.11 K - 1.11x slower +0.38 μs
+  """
+  def md5_vs_sha2() do
+    to_hash = %{
+      "payload" => %{
+        "before" => nil,
+        "after" => %{
+          "categoryskills_idCategoryskills" => 1,
+          "danger" => nil,
+          "disabled" => 0,
+          "equipments" => nil,
+          "idSkills" => 4,
+          "name" => "CP",
+          "unique_reference" => "4"
+        },
+        "source" => %{
+          "db" => "toto",
+          "table" => "toto"
+        }
+      }
+    }
+
+    hashit = fn algo ->
+      str = Jason.encode!(to_hash)
+      :crypto.hash(algo, str)
+    end
+
+    Benchee.run(%{
+      "MD5" => fn -> hashit.(:md5) end,
+      "SHA224" => fn -> hashit.(:sha224) end,
+      "SHA256" => fn -> hashit.(:sha256) end
+    })
   end
 end
